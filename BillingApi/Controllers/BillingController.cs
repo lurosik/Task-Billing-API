@@ -1,9 +1,12 @@
 ﻿using BillingApi.Factories;
 using BillingApi.Model;
 using BillingApi.Validators;
+using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace BillingApi.Controllers
@@ -12,15 +15,17 @@ namespace BillingApi.Controllers
     [ApiController]
     public class BillingController : ControllerBase
     {
-        private readonly IOrderValidator _orderValidator;
+        private readonly IValidator<Order> _orderValidator;
         private readonly IPaymentGatewayFactory _paymentGatewayFactory;
         private readonly IPaymentOrderFactory _paymentOrderFactory;
+        private readonly ILogger<BillingController> _logger;
 
-        public BillingController(IOrderValidator orderValidator, IPaymentGatewayFactory paymentGatewayFactory, IPaymentOrderFactory paymentOrderFactory)
+        public BillingController(IValidator<Order> orderValidator, IPaymentGatewayFactory paymentGatewayFactory, IPaymentOrderFactory paymentOrderFactory, ILogger<BillingController> logger)
         {
             _orderValidator = orderValidator;
             _paymentGatewayFactory = paymentGatewayFactory;
             _paymentOrderFactory = paymentOrderFactory;
+            _logger = logger;
         }
 
         // POST api/<BillingController>
@@ -29,7 +34,11 @@ namespace BillingApi.Controllers
         {
             try
             {
-                _orderValidator.Validate(order);
+                var validationResult = _orderValidator.Validate(order);
+                if (!validationResult.IsValid)
+                {
+                    return BadRequest(string.Join(", ", validationResult.Errors.Select(x => x.ErrorMessage)));
+                }
 
                 var paymentGateway = _paymentGatewayFactory.Build(order.PaymentGateway);
                 var paymentOrder = _paymentOrderFactory.Build(order);
@@ -47,6 +56,7 @@ namespace BillingApi.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, ex.Message);
                 return BadRequest(ex.Message);
             }
         }

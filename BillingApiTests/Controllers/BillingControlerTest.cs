@@ -1,11 +1,13 @@
 ﻿using BillingApi.Controllers;
 using BillingApi.Factories;
 using BillingApi.Model;
-using BillingApi.Validators;
 using FluentAssertions;
+using FluentValidation;
+using FluentValidation.Results;
 using GatewayLibrary;
 using GatewayLibrary.Model;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NUnit.Framework;
 using System;
@@ -17,17 +19,20 @@ namespace BillingApiTests.Controllers
 {
     public class BillingControlerTest
     {
-        private IOrderValidator _successfulOrderValidator;
-        private IOrderValidator _notSuccessfulOrderValidator;
+        private IValidator<Order> _successfulOrderValidator;
+        private IValidator<Order> _notSuccessfulOrderValidator;
+        private ILogger<BillingController> _logger;
 
         [SetUp]
         public void SetUp()
         {
-            _successfulOrderValidator = Substitute.For<IOrderValidator>();
-            _successfulOrderValidator.Validate(Arg.Any<Order>());
+            _successfulOrderValidator = Substitute.For<IValidator<Order>>();
+            _successfulOrderValidator.Validate(Arg.Any<Order>()).Returns(new ValidationResult() );
 
-            _notSuccessfulOrderValidator = Substitute.For<IOrderValidator>();
-            _notSuccessfulOrderValidator.When(x => x.Validate(Arg.Any<Order>())).Throw(new ArgumentException("Invalid order"));
+            _notSuccessfulOrderValidator = Substitute.For<IValidator<Order>>();
+            _notSuccessfulOrderValidator.Validate(Arg.Any<Order>()).Returns(new ValidationResult { Errors = new List<ValidationFailure>() { new ValidationFailure { ErrorMessage = "Invalid order" } } });
+
+            _logger = Substitute.For<ILogger<BillingController>>();
         }
 
         [Test]
@@ -61,7 +66,7 @@ namespace BillingApiTests.Controllers
                 UserId = "User123"
             };
 
-            var controller = new BillingController(_successfulOrderValidator, paymentGatewayFactory, paymentOrderFactory);
+            var controller = new BillingController(_successfulOrderValidator, paymentGatewayFactory, paymentOrderFactory, _logger);
 
             // act
             var result = await controller.Post(order);
@@ -106,7 +111,7 @@ namespace BillingApiTests.Controllers
                 UserId = "User123"
             };
 
-            var controller = new BillingController(_successfulOrderValidator, paymentGatewayFactory, paymentOrderFactory);
+            var controller = new BillingController(_successfulOrderValidator, paymentGatewayFactory, paymentOrderFactory, _logger);
 
             // act
             var result = await controller.Post(order);
@@ -150,7 +155,7 @@ namespace BillingApiTests.Controllers
                 UserId = "User123"
             };
 
-            var controller = new BillingController(_notSuccessfulOrderValidator, paymentGatewayFactory, paymentOrderFactory);
+            var controller = new BillingController(_notSuccessfulOrderValidator, paymentGatewayFactory, paymentOrderFactory, _logger);
 
             // act
             var result = await controller.Post(order);

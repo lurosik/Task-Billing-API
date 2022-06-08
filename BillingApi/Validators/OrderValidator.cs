@@ -1,13 +1,14 @@
 ﻿using BillingApi.Model;
-using System;
+using FluentValidation;
 
 namespace BillingApi.Validators
 {
-    public class OrderValidator : IOrderValidator
+    public class OrderValidator : AbstractValidator<Order>
     {
-        public void Validate(Order order)
+        public OrderValidator()
         {
-            if (order.PayableAmount <= 0) throw new ArgumentException($"{nameof(order.PayableAmount)} is not a positive value");
+            RuleFor(x => x.PayableAmount).GreaterThan(0).WithMessage("{PropertyName} is not a positive value");
         }
+       
     }
 }

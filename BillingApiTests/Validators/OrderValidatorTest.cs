@@ -2,7 +2,7 @@
 using BillingApi.Validators;
 using NUnit.Framework;
 using FluentAssertions;
-using System;
+using System.Linq;
 
 namespace BillingApiTests.Validators
 {
@@ -18,7 +18,7 @@ namespace BillingApiTests.Validators
 
         [TestCase(-12.34)]
         [TestCase(0.0)]
-        public void Should_throw_an_exception_when_order_payable_amount_value_is_incorrect(decimal payableAmount)
+        public void Should_return_valid_false_with_error_message_when_order_payable_amount_value_is_incorrect(decimal payableAmount)
         {
             // arrange
             var order = new Order()
@@ -27,14 +27,16 @@ namespace BillingApiTests.Validators
             };
 
             // act
-            var ex = Assert.Throws<ArgumentException>(() => _validator.Validate(order));
+            var result = _validator.Validate(order);
 
             // assert
-            ex.Message.Should().Be("PayableAmount is not a positive value");
+            result.IsValid.Should().BeFalse();
+            result.Errors.Count.Should().Be(1);
+            result.Errors.First().ErrorMessage.Should().Be("Payable Amount is not a positive value");
         }
 
         [Test]
-        public void Should_not_throw_an_exception_when_order_is_correct()
+        public void Should_return_valid_true_when_order_is_correct()
         {
             // arrange
             var validator = new OrderValidator();
@@ -48,8 +50,11 @@ namespace BillingApiTests.Validators
                 UserId = "789-XYZ"
             };
 
-            // act / assert
-            Assert.DoesNotThrow(() => validator.Validate(order));
+            // act
+            var result = validator.Validate(order);
+
+            // assert
+            result.IsValid.Should().BeTrue();
         }
 
     }

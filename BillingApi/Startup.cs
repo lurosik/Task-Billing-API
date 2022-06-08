@@ -1,6 +1,8 @@
 using BillingApi.Factories;
+using BillingApi.Model;
 using BillingApi.Repositories;
 using BillingApi.Validators;
+using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -30,7 +32,7 @@ namespace BillingApi
         {
             services.AddControllers();
 
-            services.AddSingleton<IOrderValidator, OrderValidator>();
+            services.AddScoped<IValidator<Order>, OrderValidator>();
             services.AddScoped<IPaymentGatewayRepository, PaymentGatewayRepository>();
             services.AddScoped<IPaymentGatewayFactory, StandardPaymentGatewayFactory>();
             services.AddScoped<IPaymentOrderFactory, StandardPaymentOrderFactory>();
